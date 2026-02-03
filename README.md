@@ -210,7 +210,7 @@ Found a bug? Want a feature? PRs welcome!
 
 ```bash
 # Development setup
-git clone https://github.com/yourusername/promptum.git
+git clone https://github.com/deyna256/promptum.git
 cd promptum
 just sync       # Install dependencies
 just test       # Run tests
@@ -231,7 +231,7 @@ MIT - do whatever you want with it.
 
 <div align="center">
 
-**[⭐ Star on GitHub](https://github.com/yourusername/promptum)** | **[🐛 Report Bug](https://github.com/yourusername/promptum/issues)** | **[💡 Request Feature](https://github.com/yourusername/promptum/issues)**
+**[⭐ Star on GitHub](https://github.com/deyna256/promptum)** | **[🐛 Report Bug](https://github.com/deyna256/promptum/issues)** | **[💡 Request Feature](https://github.com/deyna256/promptum/issues)**
 
 Made for developers who value their time.
 
