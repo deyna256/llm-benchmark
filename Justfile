@@ -10,7 +10,7 @@ typecheck:
 lint:
     uv run ruff check --fix src/llm_benchmark examples tests
 
-# Format code with ruff
+# Format code
 format:
     uv run ruff format src/llm_benchmark examples tests
 
