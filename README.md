@@ -172,24 +172,6 @@ Open `comparison.html` in your browser - see side-by-side model performance with
 
 ---
 
-## Installation
-
-```bash
-# Using pip
-pip install promptum
-
-# Using uv (faster)
-uv pip install promptum
-
-# Development setup
-git clone https://github.com/yourusername/promptum.git
-cd promptum
-just sync  # Install dependencies
-just test  # Run tests
-```
-
----
-
 ## Requirements
 
 - Python 3.13+
@@ -227,8 +209,13 @@ Cleaner. More flexible. More Pythonic.
 Found a bug? Want a feature? PRs welcome!
 
 ```bash
+# Development setup
+git clone https://github.com/yourusername/promptum.git
+cd promptum
 just sync       # Install dependencies
 just test       # Run tests
+
+# Development commands
 just lint       # Check code style
 just format     # Format code
 just typecheck  # Type checking
