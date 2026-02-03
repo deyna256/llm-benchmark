@@ -70,5 +70,5 @@ class Report:
         if not values:
             return 0
         sorted_values = sorted(values)
-        index = int(len(sorted_values) * p)
-        return sorted_values[min(index, len(sorted_values) - 1)]
+        index = int((len(sorted_values) - 1) * p)
+        return sorted_values[index]
