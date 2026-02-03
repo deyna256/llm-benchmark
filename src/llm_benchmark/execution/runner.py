@@ -1,6 +1,8 @@
 import asyncio
 from collections.abc import Callable, Sequence
 
+import httpx
+
 from llm_benchmark.core.result import TestResult
 from llm_benchmark.core.test_case import TestCase
 from llm_benchmark.providers.protocol import LLMProvider
@@ -62,7 +64,7 @@ class Runner:
                 execution_error=None,
             )
 
-        except Exception as e:
+        except (RuntimeError, ValueError, TypeError, httpx.HTTPError) as e:
             return TestResult(
                 test_case=test_case,
                 response=None,
