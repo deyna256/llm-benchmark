@@ -1,4 +1,4 @@
-from promptum.core import Metrics
+from promptum.providers import Metrics
 
 
 def test_metrics_creation(basic_metrics: Metrics) -> None:

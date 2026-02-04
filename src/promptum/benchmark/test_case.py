@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from promptum.validation.protocol import Validator
 
-from promptum.core.retry import RetryConfig
+from promptum.providers.retry import RetryConfig
 
 
 @dataclass(frozen=True, slots=True)

@@ -3,8 +3,8 @@ from collections.abc import Callable, Sequence
 
 import httpx
 
-from promptum.core.result import TestResult
-from promptum.core.test_case import TestCase
+from promptum.benchmark.result import TestResult
+from promptum.benchmark.test_case import TestCase
 from promptum.providers.protocol import LLMProvider
 
 

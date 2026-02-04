@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from promptum.core.metrics import Metrics
-from promptum.core.test_case import TestCase
+from promptum.benchmark.test_case import TestCase
+from promptum.providers.metrics import Metrics
 
 
 @dataclass(frozen=True, slots=True)

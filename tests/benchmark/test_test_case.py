@@ -1,4 +1,4 @@
-from promptum.core import TestCase
+from promptum.benchmark import TestCase
 from promptum.validation import Contains
 
 

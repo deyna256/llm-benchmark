@@ -1,6 +1,6 @@
 import pytest
 
-from promptum.core import Metrics, RetryConfig
+from promptum.providers import Metrics, RetryConfig
 
 
 @pytest.fixture

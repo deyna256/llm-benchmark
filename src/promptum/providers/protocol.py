@@ -1,6 +1,6 @@
 from typing import Any, Protocol
 
-from promptum.core.metrics import Metrics
+from promptum.providers.metrics import Metrics
 
 
 class LLMProvider(Protocol):
