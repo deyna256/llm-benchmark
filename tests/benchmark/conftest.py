@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from promptum.benchmark import Report
-from promptum.core import Metrics, TestCase, TestResult
+from promptum.benchmark import Report, TestCase, TestResult
+from promptum.providers import Metrics
 from promptum.validation import Contains
 
 
