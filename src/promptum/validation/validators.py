@@ -88,21 +88,3 @@ class JsonSchema:
             keys = ", ".join(self.required_keys)
             return f"Valid JSON with keys: {keys}"
         return "Valid JSON object"
-
-
-@dataclass(frozen=True, slots=True)
-class PlaceholderValidator:
-    """
-    Placeholder validator for deserialized reports.
-
-    Used when original validator cannot be reconstructed from storage.
-    Always returns True. Original validator logic is not preserved.
-    """
-
-    description: str
-
-    def validate(self, response: str) -> tuple[bool, dict[str, Any]]:
-        return True, {"placeholder": True, "note": "Original validator could not be reconstructed"}
-
-    def describe(self) -> str:
-        return self.description
