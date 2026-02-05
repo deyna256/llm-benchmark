@@ -37,10 +37,10 @@ class Report:
     ) -> "Report":
         filtered = list(self.results)
 
-        if model:
+        if model is not None:
             filtered = [r for r in filtered if r.test_case.model == model]
 
-        if tags:
+        if tags is not None:
             tag_set = set(tags)
             filtered = [r for r in filtered if tag_set.intersection(r.test_case.tags)]
 
