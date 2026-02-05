@@ -6,7 +6,7 @@
 ![Async](https://img.shields.io/badge/Async-First-green?style=for-the-badge)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-**Benchmark LLMs Like a Pro. In 5 Lines of Code.**
+**Benchmark LLMs Like a Pro.**
 
 Stop writing boilerplate to test LLMs. Start getting results.
 
@@ -16,11 +16,12 @@ Stop writing boilerplate to test LLMs. Start getting results.
 
 ## What's This?
 
-A dead-simple Python library for benchmarking LLM providers. Write tests once, run them across any model, get beautiful reports.
+A dead-simple Python library for benchmarking LLM providers. Write tests once, run them across any model, get structured results.
 
 ```python
 benchmark = Benchmark(provider=client, name="my_test")
 benchmark.add_test(TestCase(
+    name="basic_math",
     prompt="What is 2+2?",
     model="gpt-3.5-turbo",
     validator=Contains("4")
@@ -90,9 +91,9 @@ async def main():
         report = await benchmark.run_async()
         summary = report.get_summary()
 
-        print(f"✓ {summary['passed']}/{summary['total']} tests passed")
-        print(f"⚡ {summary['avg_latency_ms']:.0f}ms average")
-        print(f"💰 ${summary['total_cost_usd']:.6f} total cost")
+        print(f"✓ {summary.passed}/{summary.total} tests passed")
+        print(f"⚡ {summary.avg_latency_ms:.0f}ms average")
+        print(f"💰 ${summary.total_cost_usd:.6f} total cost")
 
 asyncio.run(main())
 ```
@@ -106,7 +107,7 @@ python your_script.py
 
 ## What You Get
 
-- [x] **One API for 100+ Models** - OpenRouter support out of the box (OpenAI, Anthropic, Google, etc.)
+- [x] **100+ Models via OpenRouter** - One client for OpenAI, Anthropic, Google, and more
 - [x] **Smart Validation** - ExactMatch, Contains, Regex, JsonSchema, or write your own
 - [x] **Automatic Retries** - Exponential/linear backoff with configurable attempts
 - [x] **Metrics Tracking** - Latency, tokens, cost - automatically captured
@@ -121,35 +122,42 @@ python your_script.py
 Compare GPT-4 vs Claude on your tasks:
 
 ```python
-from promptum import Benchmark, TestCase, ExactMatch, Contains, Regex
+import asyncio
+from promptum import Benchmark, TestCase, Contains, Regex, OpenRouterClient
 
-tests = [
-    TestCase(
-        name="json_output",
-        prompt='Output JSON: {"status": "ok"}',
-        model="openai/gpt-4",
-        validator=Regex(r'\{"status":\s*"ok"\}')
-    ),
-    TestCase(
-        name="json_output",
-        prompt='Output JSON: {"status": "ok"}',
-        model="anthropic/claude-3-5-sonnet",
-        validator=Regex(r'\{"status":\s*"ok"\}')
-    ),
-    TestCase(
-        name="creative_writing",
-        prompt="Write a haiku about Python",
-        model="openai/gpt-4",
-        validator=Contains("Python", case_sensitive=False)
-    ),
-]
+async def main():
+    async with OpenRouterClient(api_key="your-key") as client:
+        benchmark = Benchmark(provider=client, name="model_comparison")
 
-benchmark.add_tests(tests)
-report = await benchmark.run_async()
+        benchmark.add_tests([
+            TestCase(
+                name="json_output_gpt4",
+                prompt='Output JSON: {"status": "ok"}',
+                model="openai/gpt-4",
+                validator=Regex(r'\{"status":\s*"ok"\}')
+            ),
+            TestCase(
+                name="json_output_claude",
+                prompt='Output JSON: {"status": "ok"}',
+                model="anthropic/claude-3-5-sonnet",
+                validator=Regex(r'\{"status":\s*"ok"\}')
+            ),
+            TestCase(
+                name="creative_writing",
+                prompt="Write a haiku about Python",
+                model="openai/gpt-4",
+                validator=Contains("Python", case_sensitive=False)
+            ),
+        ])
 
-# Side-by-side model comparison
-for model, summary in report.compare_models().items():
-    print(f"{model}: {summary['pass_rate']:.0%} pass rate, {summary['avg_latency_ms']:.0f}ms avg")
+        report = await benchmark.run_async()
+
+        # Side-by-side model comparison
+        for model, model_report in report.group_by(lambda r: r.test_case.model).items():
+            summary = model_report.get_summary()
+            print(f"{model}: {summary.pass_rate:.0%} pass rate, {summary.avg_latency_ms:.0f}ms avg")
+
+asyncio.run(main())
 ```
 
 ---

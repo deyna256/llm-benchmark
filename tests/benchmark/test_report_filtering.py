@@ -42,10 +42,3 @@ def test_report_group_by_model(sample_report: Report) -> None:
     assert len(grouped["model2"].results) == 1
 
 
-def test_report_compare_models(sample_report: Report) -> None:
-    comparison = sample_report.compare_models()
-
-    assert "model1" in comparison
-    assert "model2" in comparison
-    assert comparison["model1"]["total"] == 2
-    assert comparison["model2"]["total"] == 1
