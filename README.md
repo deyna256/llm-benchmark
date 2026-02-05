@@ -91,9 +91,9 @@ async def main():
         report = await benchmark.run_async()
         summary = report.get_summary()
 
-        print(f"✓ {summary['passed']}/{summary['total']} tests passed")
-        print(f"⚡ {summary['avg_latency_ms']:.0f}ms average")
-        print(f"💰 ${summary['total_cost_usd']:.6f} total cost")
+        print(f"✓ {summary.passed}/{summary.total} tests passed")
+        print(f"⚡ {summary.avg_latency_ms:.0f}ms average")
+        print(f"💰 ${summary.total_cost_usd:.6f} total cost")
 
 asyncio.run(main())
 ```
@@ -153,8 +153,9 @@ async def main():
         report = await benchmark.run_async()
 
         # Side-by-side model comparison
-        for model, summary in report.compare_models().items():
-            print(f"{model}: {summary['pass_rate']:.0%} pass rate, {summary['avg_latency_ms']:.0f}ms avg")
+        for model, model_report in report.group_by(lambda r: r.test_case.model).items():
+            summary = model_report.get_summary()
+            print(f"{model}: {summary.pass_rate:.0%} pass rate, {summary.avg_latency_ms:.0f}ms avg")
 
 asyncio.run(main())
 ```

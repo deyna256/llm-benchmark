@@ -1,15 +1,15 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any
 
 from promptum.benchmark.result import TestResult
+from promptum.benchmark.summary import Summary
 
 
 @dataclass(frozen=True, slots=True)
 class Report:
     results: Sequence[TestResult]
 
-    def get_summary(self) -> dict[str, Any]:
+    def get_summary(self) -> Summary:
         total = len(self.results)
         passed = sum(1 for r in self.results if r.passed)
 
@@ -17,18 +17,17 @@ class Report:
         total_cost = sum(r.metrics.cost_usd or 0 for r in self.results if r.metrics)
         total_tokens = sum(r.metrics.total_tokens or 0 for r in self.results if r.metrics)
 
-        return {
-            "total": total,
-            "passed": passed,
-            "failed": total - passed,
-            "pass_rate": passed / total if total > 0 else 0,
-            "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0,
-            "p50_latency_ms": self._percentile(latencies, 0.5) if latencies else 0,
-            "p95_latency_ms": self._percentile(latencies, 0.95) if latencies else 0,
-            "p99_latency_ms": self._percentile(latencies, 0.99) if latencies else 0,
-            "total_cost_usd": total_cost,
-            "total_tokens": total_tokens,
-        }
+        return Summary(
+            total=total,
+            passed=passed,
+            failed=total - passed,
+            pass_rate=passed / total if total > 0 else 0,
+            avg_latency_ms=sum(latencies) / len(latencies) if latencies else 0,
+            min_latency_ms=min(latencies) if latencies else 0,
+            max_latency_ms=max(latencies) if latencies else 0,
+            total_cost_usd=total_cost,
+            total_tokens=total_tokens,
+        )
 
     def filter(
         self,
@@ -60,15 +59,3 @@ class Report:
             groups[group_key].append(result)
 
         return {k: Report(results=v) for k, v in groups.items()}
-
-    def compare_models(self) -> dict[str, dict[str, Any]]:
-        by_model = self.group_by(lambda r: r.test_case.model)
-        return {model: report.get_summary() for model, report in by_model.items()}
-
-    @staticmethod
-    def _percentile(values: list[float], p: float) -> float:
-        if not values:
-            return 0
-        sorted_values = sorted(values)
-        index = int((len(sorted_values) - 1) * p)
-        return sorted_values[index]
