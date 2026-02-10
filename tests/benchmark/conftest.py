@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pytest
 
-from promptum.benchmark import Report, TestCase, TestResult
 from promptum.providers import Metrics
+from promptum.session import Prompt, Report, TestResult
 from promptum.validation import Contains
 
 
@@ -11,7 +11,7 @@ from promptum.validation import Contains
 def sample_results() -> list[TestResult]:
     return [
         TestResult(
-            test_case=TestCase(
+            test_case=Prompt(
                 name="test1",
                 prompt="prompt",
                 model="model1",
@@ -25,7 +25,7 @@ def sample_results() -> list[TestResult]:
             timestamp=datetime.now(),
         ),
         TestResult(
-            test_case=TestCase(
+            test_case=Prompt(
                 name="test2",
                 prompt="prompt",
                 model="model1",
@@ -39,7 +39,7 @@ def sample_results() -> list[TestResult]:
             timestamp=datetime.now(),
         ),
         TestResult(
-            test_case=TestCase(
+            test_case=Prompt(
                 name="test3",
                 prompt="prompt",
                 model="model2",

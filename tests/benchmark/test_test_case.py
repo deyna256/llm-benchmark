@@ -1,9 +1,9 @@
-from promptum.benchmark import TestCase
+from promptum.session import Prompt
 from promptum.validation import Contains
 
 
 def test_test_case_creation() -> None:
-    test_case = TestCase(
+    test_case = Prompt(
         name="test1",
         prompt="What is 2+2?",
         model="gpt-3.5-turbo",
@@ -19,7 +19,7 @@ def test_test_case_creation() -> None:
 
 
 def test_test_case_with_system_prompt() -> None:
-    test_case = TestCase(
+    test_case = Prompt(
         name="test2",
         prompt="Answer briefly",
         model="gpt-4",
@@ -30,7 +30,7 @@ def test_test_case_with_system_prompt() -> None:
 
 
 def test_test_case_with_custom_temperature() -> None:
-    test_case = TestCase(
+    test_case = Prompt(
         name="test3",
         prompt="Be creative",
         model="gpt-4",

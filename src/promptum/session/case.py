@@ -9,7 +9,7 @@ from promptum.providers.retry import RetryConfig
 
 
 @dataclass(frozen=True, slots=True)
-class TestCase:
+class Prompt:
     name: str
     prompt: str
     model: str

@@ -3,9 +3,9 @@ from collections.abc import Callable, Sequence
 
 import httpx
 
-from promptum.benchmark.result import TestResult
-from promptum.benchmark.test_case import TestCase
 from promptum.providers.protocol import LLMProvider
+from promptum.session.case import Prompt
+from promptum.session.result import TestResult
 
 
 class Runner:
@@ -19,12 +19,12 @@ class Runner:
         self.max_concurrent = max_concurrent
         self.progress_callback = progress_callback
 
-    async def run(self, test_cases: Sequence[TestCase]) -> list[TestResult]:
+    async def run(self, test_cases: Sequence[Prompt]) -> list[TestResult]:
         semaphore = asyncio.Semaphore(self.max_concurrent)
         completed = 0
         total = len(test_cases)
 
-        async def run_with_semaphore(test_case: TestCase) -> TestResult:
+        async def run_with_semaphore(test_case: Prompt) -> TestResult:
             async with semaphore:
                 result = await self._run_single_test(test_case)
 
@@ -41,7 +41,7 @@ class Runner:
 
         return list(results)
 
-    async def _run_single_test(self, test_case: TestCase) -> TestResult:
+    async def _run_single_test(self, test_case: Prompt) -> TestResult:
         try:
             response, metrics = await self.provider.generate(
                 prompt=test_case.prompt,

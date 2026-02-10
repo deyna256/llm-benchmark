@@ -1,4 +1,4 @@
-from promptum.benchmark import Report
+from promptum.session import Report
 
 
 def test_report_filter_by_model(sample_report: Report) -> None:
@@ -40,5 +40,3 @@ def test_report_group_by_model(sample_report: Report) -> None:
     assert "model2" in grouped
     assert len(grouped["model1"].results) == 2
     assert len(grouped["model2"].results) == 1
-
-

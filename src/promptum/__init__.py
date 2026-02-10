@@ -1,5 +1,5 @@
-from promptum.benchmark import Benchmark, Report, Runner, Summary, TestCase, TestResult
 from promptum.providers import LLMProvider, Metrics, OpenRouterClient, RetryConfig, RetryStrategy
+from promptum.session import Prompt, Report, Runner, Session, Summary, TestResult
 from promptum.validation import (
     Contains,
     ExactMatch,
@@ -11,7 +11,7 @@ from promptum.validation import (
 __version__ = "0.0.3"
 
 __all__ = [
-    "TestCase",
+    "Prompt",
     "TestResult",
     "Summary",
     "Metrics",
@@ -25,6 +25,6 @@ __all__ = [
     "LLMProvider",
     "OpenRouterClient",
     "Runner",
-    "Benchmark",
+    "Session",
     "Report",
 ]

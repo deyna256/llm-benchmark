@@ -1,8 +1,8 @@
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from promptum.benchmark.result import TestResult
-from promptum.benchmark.summary import Summary
+from promptum.session.result import TestResult
+from promptum.session.summary import Summary
 
 
 @dataclass(frozen=True, slots=True)

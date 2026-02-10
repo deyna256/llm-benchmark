@@ -1,4 +1,4 @@
-from promptum.benchmark import Report
+from promptum.session import Report
 
 
 def test_report_summary(sample_report: Report) -> None:

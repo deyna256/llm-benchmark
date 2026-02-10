@@ -2,13 +2,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from promptum.benchmark.test_case import TestCase
 from promptum.providers.metrics import Metrics
+from promptum.session.case import Prompt
 
 
 @dataclass(frozen=True, slots=True)
 class TestResult:
-    test_case: TestCase
+    test_case: Prompt
     response: str | None
     passed: bool
     metrics: Metrics | None

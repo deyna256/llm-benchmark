@@ -1,14 +1,14 @@
 import asyncio
 from collections.abc import Callable, Sequence
 
-from promptum.benchmark.report import Report
-from promptum.benchmark.result import TestResult
-from promptum.benchmark.runner import Runner
-from promptum.benchmark.test_case import TestCase
 from promptum.providers.protocol import LLMProvider
+from promptum.session.case import Prompt
+from promptum.session.report import Report
+from promptum.session.result import TestResult
+from promptum.session.runner import Runner
 
 
-class Benchmark:
+class Session:
     def __init__(
         self,
         provider: LLMProvider,
@@ -20,12 +20,12 @@ class Benchmark:
         self.name = name
         self.max_concurrent = max_concurrent
         self.progress_callback = progress_callback
-        self._test_cases: list[TestCase] = []
+        self._test_cases: list[Prompt] = []
 
-    def add_test(self, test_case: TestCase) -> None:
+    def add_test(self, test_case: Prompt) -> None:
         self._test_cases.append(test_case)
 
-    def add_tests(self, test_cases: Sequence[TestCase]) -> None:
+    def add_tests(self, test_cases: Sequence[Prompt]) -> None:
         self._test_cases.extend(test_cases)
 
     def run(self) -> Report:
