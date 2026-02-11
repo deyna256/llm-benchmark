@@ -63,7 +63,14 @@ class OpenRouterClient:
         }
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        reserved_keys: set[str] = {"model", "messages", "temperature", "max_tokens"}
+        conflicts = reserved_keys.intersection(kwargs.keys())
+        if conflicts:
+            raise ValueError(
+                f"Cannot override reserved payload fields: {', '.join(sorted(conflicts))}"
+                )
         payload.update(kwargs)
+
 
         for attempt in range(config.max_attempts):
             start_time = time.perf_counter()
