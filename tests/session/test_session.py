@@ -29,30 +29,30 @@ async def test_add_tests_extends_internal_list(
     assert len(session._test_cases) == 2
 
 
-async def test_run_async_empty_returns_empty_report(mock_provider: AsyncMock):
+async def test_run_empty_returns_empty_report(mock_provider: AsyncMock):
     session = Session(provider=mock_provider)
 
-    report = await session.run_async()
+    report = await session.run()
 
     assert isinstance(report, Report)
     assert len(report.results) == 0
 
 
-async def test_run_async_returns_report_with_results(
+async def test_run_returns_report_with_results(
     mock_provider: AsyncMock,
     sample_prompt: Prompt,
 ):
     session = Session(provider=mock_provider)
     session.add_test(sample_prompt)
 
-    report = await session.run_async()
+    report = await session.run()
 
     assert isinstance(report, Report)
     assert len(report.results) == 1
     assert report.results[0].passed is True
 
 
-async def test_run_async_passes_max_concurrent(
+async def test_run_passes_max_concurrent(
     mock_provider: AsyncMock,
     sample_prompt: Prompt,
 ):
@@ -64,7 +64,7 @@ async def test_run_async_passes_max_concurrent(
         mock_runner.run.return_value = []
         mock_runner_cls.return_value = mock_runner
 
-        await session.run_async()
+        await session.run()
 
         mock_runner_cls.assert_called_once_with(
             provider=mock_provider,
@@ -73,7 +73,7 @@ async def test_run_async_passes_max_concurrent(
         )
 
 
-async def test_run_async_passes_progress_callback(
+async def test_run_passes_progress_callback(
     mock_provider: AsyncMock,
     sample_prompt: Prompt,
 ):
@@ -86,23 +86,10 @@ async def test_run_async_passes_progress_callback(
         mock_runner.run.return_value = []
         mock_runner_cls.return_value = mock_runner
 
-        await session.run_async()
+        await session.run()
 
         mock_runner_cls.assert_called_once_with(
             provider=mock_provider,
             max_concurrent=5,
             progress_callback=callback,
         )
-
-
-def test_run_sync_returns_report(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-):
-    session = Session(provider=mock_provider)
-    session.add_test(sample_prompt)
-
-    report = session.run()
-
-    assert isinstance(report, Report)
-    assert len(report.results) == 1
