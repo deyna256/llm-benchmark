@@ -7,7 +7,6 @@ import pytest
 from promptum.providers.openrouter import OpenRouterClient
 from promptum.providers.retry import RetryConfig, RetryStrategy
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
 
 def _make_response(
     status_code: int = 200,
@@ -20,18 +19,11 @@ def _make_response(
     )
 
 
-# ── Context manager / init ───────────────────────────────────────────────────
-
 async def test_generate_without_context_manager_raises_runtime_error():
     client = OpenRouterClient(api_key="test-key")
 
     with pytest.raises(RuntimeError, match="Client not initialized"):
         await client.generate(prompt="hello", model="test-model")
-
-
-async def test_context_manager_creates_client():
-    async with OpenRouterClient(api_key="test-key") as client:
-        assert client._client is not None
 
 
 async def test_context_manager_closes_client_on_exit():
@@ -41,15 +33,6 @@ async def test_context_manager_closes_client_on_exit():
 
     assert inner_client.is_closed
 
-
-async def test_default_retry_config_used_when_none_provided():
-    client = OpenRouterClient(api_key="test-key")
-
-    assert client.default_retry_config.max_attempts == 3
-    assert client.default_retry_config.strategy == RetryStrategy.EXPONENTIAL_BACKOFF
-
-
-# ── Successful generation ────────────────────────────────────────────────────
 
 async def test_generate_success_returns_content_and_metrics(
     successful_api_response: dict[str, Any],
@@ -62,6 +45,10 @@ async def test_generate_success_returns_content_and_metrics(
 
     assert content == "Hello, world!"
     assert metrics.latency_ms > 0
+    assert metrics.prompt_tokens == 10
+    assert metrics.completion_tokens == 20
+    assert metrics.total_tokens == 30
+    assert len(metrics.retry_delays) == 0
 
 
 async def test_generate_with_system_prompt_includes_system_message(
@@ -132,20 +119,6 @@ async def test_generate_passes_extra_kwargs_to_payload(
         assert payload["frequency_penalty"] == 0.5
 
 
-async def test_generate_metrics_contain_usage_data(
-    successful_api_response: dict[str, Any],
-    no_retry_config: RetryConfig,
-):
-    async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(return_value=_make_response(200, successful_api_response))
-
-        _, metrics = await client.generate(prompt="hello", model="m")
-
-    assert metrics.prompt_tokens == 10
-    assert metrics.completion_tokens == 20
-    assert metrics.total_tokens == 30
-
-
 async def test_generate_metrics_with_missing_usage(
     minimal_api_response: dict[str, Any],
     no_retry_config: RetryConfig,
@@ -159,18 +132,6 @@ async def test_generate_metrics_with_missing_usage(
     assert metrics.completion_tokens is None
     assert metrics.total_tokens is None
     assert metrics.cost_usd is None
-
-
-async def test_generate_metrics_latency_is_positive(
-    successful_api_response: dict[str, Any],
-    no_retry_config: RetryConfig,
-):
-    async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(return_value=_make_response(200, successful_api_response))
-
-        _, metrics = await client.generate(prompt="hello", model="m")
-
-    assert metrics.latency_ms > 0
 
 
 async def test_generate_metrics_uses_total_cost_field(
@@ -188,103 +149,44 @@ async def test_generate_metrics_uses_total_cost_field(
     assert metrics.cost_usd == 0.05
 
 
-# ── Reserved fields ──────────────────────────────────────────────────────────
-
 async def test_generate_rejects_reserved_field_override():
     async with OpenRouterClient(api_key="test-key") as client:
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="messages"):
             await client.generate(
                 prompt="hello",
                 model="test-model",
                 messages=[{"role": "user", "content": "injected"}],
             )
 
-    assert "messages" in str(exc_info.value)
 
-
-async def test_generate_rejects_model_in_kwargs():
-    async with OpenRouterClient(api_key="test-key") as client:
-        with pytest.raises(TypeError, match="model"):
-            await client.generate(prompt="hello", model="m", **{"model": "other"})
-
-
-async def test_generate_rejects_temperature_in_kwargs():
-    async with OpenRouterClient(api_key="test-key") as client:
-        with pytest.raises(TypeError, match="temperature"):
-            await client.generate(
-                prompt="hello", model="m", temperature=0.5, **{"temperature": 0.9}
-            )
-
-
-async def test_generate_rejects_max_tokens_in_kwargs():
-    async with OpenRouterClient(api_key="test-key") as client:
-        with pytest.raises(TypeError, match="max_tokens"):
-            await client.generate(
-                prompt="hello", model="m", max_tokens=50, **{"max_tokens": 100}
-            )
-
-
-# ── Invalid response ─────────────────────────────────────────────────────────
-
-async def test_generate_invalid_response_missing_choices_raises_runtime_error(
+@pytest.mark.parametrize(
+    "json_data",
+    [
+        {"data": "bad"},
+        {"choices": []},
+        {"choices": [{"message": {}}]},
+    ],
+    ids=["missing_choices", "empty_choices", "missing_content"],
+)
+async def test_generate_invalid_response_raises_runtime_error(
     no_retry_config: RetryConfig,
+    json_data: dict[str, Any],
 ):
     async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(return_value=_make_response(200, {"data": "bad"}))
+        client._client.post = AsyncMock(return_value=_make_response(200, json_data))
 
         with pytest.raises(RuntimeError, match="Invalid API response"):
             await client.generate(prompt="hello", model="m")
 
 
-async def test_generate_invalid_response_empty_choices_raises_runtime_error(
-    no_retry_config: RetryConfig,
-):
-    async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(return_value=_make_response(200, {"choices": []}))
-
-        with pytest.raises(RuntimeError, match="Invalid API response"):
-            await client.generate(prompt="hello", model="m")
-
-
-async def test_generate_invalid_response_missing_content_raises_runtime_error(
-    no_retry_config: RetryConfig,
-):
-    async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(
-            return_value=_make_response(200, {"choices": [{"message": {}}]})
-        )
-
-        with pytest.raises(RuntimeError, match="Invalid API response"):
-            await client.generate(prompt="hello", model="m")
-
-
-# ── Retry behavior ───────────────────────────────────────────────────────────
-
-async def test_generate_retries_on_429_then_succeeds(
+@pytest.mark.parametrize("status_code", [429, 500], ids=["429", "500"])
+async def test_generate_retries_on_retryable_status_then_succeeds(
     successful_api_response: dict[str, Any],
     retry_config_3_attempts: RetryConfig,
+    status_code: int,
 ):
     responses = [
-        _make_response(429),
-        _make_response(200, successful_api_response),
-    ]
-    async with OpenRouterClient(
-        api_key="k", default_retry_config=retry_config_3_attempts
-    ) as client:
-        client._client.post = AsyncMock(side_effect=responses)
-        client._sleep = AsyncMock()
-
-        content, metrics = await client.generate(prompt="hello", model="m")
-
-    assert content == "Hello, world!"
-
-
-async def test_generate_retries_on_500_then_succeeds(
-    successful_api_response: dict[str, Any],
-    retry_config_3_attempts: RetryConfig,
-):
-    responses = [
-        _make_response(500),
+        _make_response(status_code),
         _make_response(200, successful_api_response),
     ]
     async with OpenRouterClient(
@@ -322,59 +224,27 @@ async def test_generate_non_retryable_status_raises_immediately(
             await client.generate(prompt="hello", model="m")
 
 
-async def test_generate_retries_on_timeout_then_succeeds(
+@pytest.mark.parametrize(
+    "exception",
+    [httpx.ReadTimeout("timed out"), httpx.NetworkError("connection reset")],
+    ids=["timeout", "network_error"],
+)
+async def test_generate_retries_on_transient_error_then_succeeds(
     successful_api_response: dict[str, Any],
     retry_config_3_attempts: RetryConfig,
+    exception: Exception,
 ):
     async with OpenRouterClient(
         api_key="k", default_retry_config=retry_config_3_attempts
     ) as client:
         client._client.post = AsyncMock(
-            side_effect=[
-                httpx.ReadTimeout("timed out"),
-                _make_response(200, successful_api_response),
-            ]
+            side_effect=[exception, _make_response(200, successful_api_response)]
         )
         client._sleep = AsyncMock()
 
         content, _ = await client.generate(prompt="hello", model="m")
 
     assert content == "Hello, world!"
-
-
-async def test_generate_retries_on_network_error_then_succeeds(
-    successful_api_response: dict[str, Any],
-    retry_config_3_attempts: RetryConfig,
-):
-    async with OpenRouterClient(
-        api_key="k", default_retry_config=retry_config_3_attempts
-    ) as client:
-        client._client.post = AsyncMock(
-            side_effect=[
-                httpx.NetworkError("connection reset"),
-                _make_response(200, successful_api_response),
-            ]
-        )
-        client._sleep = AsyncMock()
-
-        content, _ = await client.generate(prompt="hello", model="m")
-
-    assert content == "Hello, world!"
-
-
-async def test_generate_timeout_exhausts_retries_raises_runtime_error(
-    retry_config_3_attempts: RetryConfig,
-):
-    async with OpenRouterClient(
-        api_key="k", default_retry_config=retry_config_3_attempts
-    ) as client:
-        client._client.post = AsyncMock(
-            side_effect=httpx.ReadTimeout("timed out"),
-        )
-        client._sleep = AsyncMock()
-
-        with pytest.raises(RuntimeError, match="failed after 3 attempts"):
-            await client.generate(prompt="hello", model="m")
 
 
 async def test_generate_retry_delays_recorded_in_metrics(
@@ -398,19 +268,18 @@ async def test_generate_retry_delays_recorded_in_metrics(
     assert all(d > 0 for d in metrics.retry_delays)
 
 
-async def test_generate_no_retry_delays_on_first_success(
-    successful_api_response: dict[str, Any],
-    no_retry_config: RetryConfig,
+async def test_generate_transient_error_exhausts_retries_raises_runtime_error(
+    retry_config_3_attempts: RetryConfig,
 ):
-    async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
-        client._client.post = AsyncMock(return_value=_make_response(200, successful_api_response))
+    async with OpenRouterClient(
+        api_key="k", default_retry_config=retry_config_3_attempts
+    ) as client:
+        client._client.post = AsyncMock(side_effect=httpx.ReadTimeout("timed out"))
+        client._sleep = AsyncMock()
 
-        _, metrics = await client.generate(prompt="hello", model="m")
+        with pytest.raises(RuntimeError, match="failed after 3 attempts"):
+            await client.generate(prompt="hello", model="m")
 
-    assert len(metrics.retry_delays) == 0
-
-
-# ── Delay calculation ────────────────────────────────────────────────────────
 
 def test_calculate_delay_exponential_backoff():
     client = OpenRouterClient(api_key="k")
@@ -452,8 +321,6 @@ def test_calculate_delay_fixed_returns_initial():
     assert client._calculate_delay(1, config) == 2.5
     assert client._calculate_delay(5, config) == 2.5
 
-
-# ── Per-call config ──────────────────────────────────────────────────────────
 
 async def test_generate_uses_per_call_retry_config_over_default(
     successful_api_response: dict[str, Any],

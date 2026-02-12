@@ -56,12 +56,3 @@ def retry_config_3_attempts() -> RetryConfig:
         max_delay=0.1,
         exponential_base=2.0,
     )
-
-
-@pytest.fixture
-def fixed_delay_retry_config() -> RetryConfig:
-    return RetryConfig(
-        max_attempts=3,
-        strategy=RetryStrategy.FIXED_DELAY,
-        initial_delay=0.01,
-    )

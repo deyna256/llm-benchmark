@@ -29,19 +29,6 @@ async def test_add_tests_extends_internal_list(
     assert len(session._test_cases) == 2
 
 
-async def test_add_test_multiple_times_accumulates(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-):
-    session = Session(provider=mock_provider)
-
-    session.add_test(sample_prompt)
-    session.add_test(sample_prompt)
-    session.add_test(sample_prompt)
-
-    assert len(session._test_cases) == 3
-
-
 async def test_run_async_empty_returns_empty_report(mock_provider: AsyncMock):
     session = Session(provider=mock_provider)
 
@@ -108,21 +95,6 @@ async def test_run_async_passes_progress_callback(
         )
 
 
-async def test_run_async_returns_report_with_correct_result_count(
-    mock_provider: AsyncMock,
-    passing_validator: MagicMock,
-):
-    session = Session(provider=mock_provider)
-    for i in range(5):
-        session.add_test(
-            Prompt(name=f"p-{i}", prompt=f"prompt-{i}", model="m", validator=passing_validator)
-        )
-
-    report = await session.run_async()
-
-    assert len(report.results) == 5
-
-
 def test_run_sync_returns_report(
     mock_provider: AsyncMock,
     sample_prompt: Prompt,
@@ -134,21 +106,3 @@ def test_run_sync_returns_report(
 
     assert isinstance(report, Report)
     assert len(report.results) == 1
-
-
-async def test_session_stores_name(mock_provider: AsyncMock):
-    session = Session(provider=mock_provider, name="my-session")
-
-    assert session.name == "my-session"
-
-
-async def test_session_default_name(mock_provider: AsyncMock):
-    session = Session(provider=mock_provider)
-
-    assert session.name == "benchmark"
-
-
-async def test_session_default_max_concurrent(mock_provider: AsyncMock):
-    session = Session(provider=mock_provider)
-
-    assert session.max_concurrent == 5

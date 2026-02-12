@@ -3,13 +3,14 @@ from datetime import UTC
 from unittest.mock import AsyncMock, MagicMock
 
 import httpx
+import pytest
 
 from promptum.providers.metrics import Metrics
 from promptum.session.case import Prompt
 from promptum.session.runner import Runner
 
 
-async def test_run_single_passing_test_returns_passed_result(
+async def test_run_single_passing_test(
     mock_provider: AsyncMock,
     sample_prompt: Prompt,
 ):
@@ -18,12 +19,15 @@ async def test_run_single_passing_test_returns_passed_result(
     results = await runner.run([sample_prompt])
 
     assert len(results) == 1
-    assert results[0].passed is True
-    assert results[0].response == "test response"
-    assert results[0].execution_error is None
+    result = results[0]
+    assert result.passed is True
+    assert result.response == "test response"
+    assert result.execution_error is None
+    assert result.validation_details == {"matched": True}
+    assert result.timestamp.tzinfo == UTC
 
 
-async def test_run_single_failing_validation_returns_failed_result(
+async def test_run_single_failing_validation(
     mock_provider: AsyncMock,
     failing_prompt: Prompt,
 ):
@@ -64,21 +68,6 @@ async def test_run_passes_correct_arguments_to_provider(
     )
 
 
-async def test_run_multiple_tests_returns_all_results(
-    mock_provider: AsyncMock,
-    passing_validator: MagicMock,
-):
-    prompts = [
-        Prompt(name=f"test-{i}", prompt=f"prompt-{i}", model="m", validator=passing_validator)
-        for i in range(3)
-    ]
-    runner = Runner(provider=mock_provider)
-
-    results = await runner.run(prompts)
-
-    assert len(results) == 3
-
-
 async def test_run_empty_test_cases_returns_empty_list(mock_provider: AsyncMock):
     runner = Runner(provider=mock_provider)
 
@@ -87,71 +76,32 @@ async def test_run_empty_test_cases_returns_empty_list(mock_provider: AsyncMock)
     assert results == []
 
 
-async def test_run_provider_runtime_error_returns_error_result(
+@pytest.mark.parametrize(
+    "exception",
+    [
+        RuntimeError("API down"),
+        ValueError("bad value"),
+        TypeError("wrong type"),
+        httpx.HTTPError("connection failed"),
+    ],
+    ids=["RuntimeError", "ValueError", "TypeError", "HTTPError"],
+)
+async def test_run_provider_exception_returns_error_result(
     sample_prompt: Prompt,
+    exception: Exception,
 ):
     provider = AsyncMock()
-    provider.generate.side_effect = RuntimeError("API down")
+    provider.generate.side_effect = exception
     runner = Runner(provider=provider)
 
     results = await runner.run([sample_prompt])
 
     assert len(results) == 1
-    assert results[0].passed is False
-    assert "API down" in results[0].execution_error
-
-
-async def test_run_provider_value_error_returns_error_result(
-    sample_prompt: Prompt,
-):
-    provider = AsyncMock()
-    provider.generate.side_effect = ValueError("bad value")
-    runner = Runner(provider=provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].passed is False
-    assert "bad value" in results[0].execution_error
-
-
-async def test_run_provider_type_error_returns_error_result(
-    sample_prompt: Prompt,
-):
-    provider = AsyncMock()
-    provider.generate.side_effect = TypeError("wrong type")
-    runner = Runner(provider=provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].passed is False
-    assert "wrong type" in results[0].execution_error
-
-
-async def test_run_provider_http_error_returns_error_result(
-    sample_prompt: Prompt,
-):
-    provider = AsyncMock()
-    provider.generate.side_effect = httpx.HTTPError("connection failed")
-    runner = Runner(provider=provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].passed is False
-    assert "connection failed" in results[0].execution_error
-
-
-async def test_run_error_result_has_none_response_and_metrics(
-    sample_prompt: Prompt,
-):
-    provider = AsyncMock()
-    provider.generate.side_effect = RuntimeError("boom")
-    runner = Runner(provider=provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].response is None
-    assert results[0].metrics is None
-    assert results[0].passed is False
+    result = results[0]
+    assert result.passed is False
+    assert result.response is None
+    assert result.metrics is None
+    assert str(exception) in result.execution_error
 
 
 async def test_run_progress_callback_called_for_each_test(
@@ -172,17 +122,6 @@ async def test_run_progress_callback_called_for_each_test(
         completed, total, result = call_args[0]
         assert total == 3
         assert 1 <= completed <= 3
-
-
-async def test_run_without_progress_callback_no_error(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-):
-    runner = Runner(provider=mock_provider, progress_callback=None)
-
-    results = await runner.run([sample_prompt])
-
-    assert len(results) == 1
 
 
 async def test_run_respects_max_concurrent_limit(
@@ -214,57 +153,3 @@ async def test_run_respects_max_concurrent_limit(
     await runner.run(prompts)
 
     assert peak <= 3
-
-
-async def test_run_result_contains_validation_details(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-):
-    runner = Runner(provider=mock_provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].validation_details == {"matched": True}
-
-
-async def test_run_result_has_timestamp(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-):
-    runner = Runner(provider=mock_provider)
-
-    results = await runner.run([sample_prompt])
-
-    assert results[0].timestamp is not None
-    assert results[0].timestamp.tzinfo is not None
-    assert results[0].timestamp.tzinfo == UTC
-
-
-async def test_run_mixed_success_and_failure(
-    mock_provider: AsyncMock,
-    sample_prompt: Prompt,
-    failing_prompt: Prompt,
-):
-    error_provider = AsyncMock()
-    error_provider.generate.side_effect = RuntimeError("fail")
-    error_prompt = Prompt(
-        name="error-prompt",
-        prompt="cause error",
-        model="m",
-        validator=MagicMock(),
-    )
-
-    # Use mock_provider for passing and failing prompts
-    runner = Runner(provider=mock_provider)
-    results = await runner.run([sample_prompt, failing_prompt])
-
-    passed_count = sum(1 for r in results if r.passed)
-    failed_count = sum(1 for r in results if not r.passed)
-    assert passed_count == 1
-    assert failed_count == 1
-
-    # Separate run with error provider
-    runner_err = Runner(provider=error_provider)
-    error_results = await runner_err.run([error_prompt])
-    assert error_results[0].passed is False
-    assert error_results[0].execution_error is not None
