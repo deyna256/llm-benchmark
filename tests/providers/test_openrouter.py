@@ -182,8 +182,13 @@ async def test_generate_invalid_response_raises_parse_error(
     async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
         client._client.post = AsyncMock(return_value=_make_response(200, json_data))
 
-        with pytest.raises(ProviderResponseParseError, match="Invalid API response"):
+        with pytest.raises(ProviderResponseParseError) as exc_info:
             await client.generate(prompt="hello", model="m")
+
+        err = exc_info.value
+        assert "Invalid API response" in str(err)
+        assert err.original_error is not None
+        assert err.__cause__ is err.original_error
 
 
 @pytest.mark.parametrize("status_code", [429, 500], ids=["429", "500"])
@@ -225,6 +230,8 @@ async def test_generate_exhausts_retries_raises_retry_exhausted(
         assert err.last_status_code == 500
         assert isinstance(err.last_response_body, str)
         assert len(err.retry_delays) == 2
+        assert "3 attempts" in str(err)
+        assert "500" in str(err)
 
 
 async def test_generate_non_retryable_status_raises_http_status_error(
@@ -239,6 +246,8 @@ async def test_generate_non_retryable_status_raises_http_status_error(
         err = exc_info.value
         assert err.status_code == 403
         assert isinstance(err.response_body, str)
+        assert err.__cause__ is not None
+        assert isinstance(err.__cause__, httpx.HTTPStatusError)
 
 
 @pytest.mark.parametrize(
