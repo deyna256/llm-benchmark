@@ -8,7 +8,7 @@ typecheck:
 
 # Run ruff linter with automatic fixes
 lint:
-    uv run ruff check --fix src/promptum tests
+    uv run ruff check src/promptum tests
 
 # Format code
 format:
