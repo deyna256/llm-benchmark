@@ -4,6 +4,13 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
+from promptum.providers.exceptions import (
+    ProviderHTTPStatusError,
+    ProviderNotInitializedError,
+    ProviderResponseParseError,
+    ProviderRetryExhaustedError,
+    ProviderTransientError,
+)
 from promptum.providers.openrouter import OpenRouterClient
 from promptum.providers.retry import RetryConfig, RetryStrategy
 
@@ -19,10 +26,10 @@ def _make_response(
     )
 
 
-async def test_generate_without_context_manager_raises_runtime_error():
+async def test_generate_without_context_manager_raises_not_initialized():
     client = OpenRouterClient(api_key="test-key")
 
-    with pytest.raises(RuntimeError, match="Client not initialized"):
+    with pytest.raises(ProviderNotInitializedError, match="Client not initialized"):
         await client.generate(prompt="hello", model="test-model")
 
 
@@ -168,14 +175,14 @@ async def test_generate_rejects_reserved_field_override():
     ],
     ids=["missing_choices", "empty_choices", "missing_content"],
 )
-async def test_generate_invalid_response_raises_runtime_error(
+async def test_generate_invalid_response_raises_parse_error(
     no_retry_config: RetryConfig,
     json_data: dict[str, Any],
 ):
     async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
         client._client.post = AsyncMock(return_value=_make_response(200, json_data))
 
-        with pytest.raises(RuntimeError, match="Invalid API response"):
+        with pytest.raises(ProviderResponseParseError, match="Invalid API response"):
             await client.generate(prompt="hello", model="m")
 
 
@@ -200,7 +207,7 @@ async def test_generate_retries_on_retryable_status_then_succeeds(
     assert content == "Hello, world!"
 
 
-async def test_generate_exhausts_retries_raises_runtime_error(
+async def test_generate_exhausts_retries_raises_retry_exhausted(
     retry_config_3_attempts: RetryConfig,
 ):
     responses = [_make_response(500) for _ in range(3)]
@@ -210,18 +217,28 @@ async def test_generate_exhausts_retries_raises_runtime_error(
         client._client.post = AsyncMock(side_effect=responses)
         client._sleep = AsyncMock()
 
-        with pytest.raises(RuntimeError, match="failed after 3 attempts"):
+        with pytest.raises(ProviderRetryExhaustedError) as exc_info:
             await client.generate(prompt="hello", model="m")
 
+        err = exc_info.value
+        assert err.attempts == 3
+        assert err.last_status_code == 500
+        assert isinstance(err.last_response_body, str)
+        assert len(err.retry_delays) == 2
 
-async def test_generate_non_retryable_status_raises_immediately(
+
+async def test_generate_non_retryable_status_raises_http_status_error(
     no_retry_config: RetryConfig,
 ):
     async with OpenRouterClient(api_key="k", default_retry_config=no_retry_config) as client:
         client._client.post = AsyncMock(return_value=_make_response(403))
 
-        with pytest.raises(RuntimeError, match="HTTP error 403"):
+        with pytest.raises(ProviderHTTPStatusError) as exc_info:
             await client.generate(prompt="hello", model="m")
+
+        err = exc_info.value
+        assert err.status_code == 403
+        assert isinstance(err.response_body, str)
 
 
 @pytest.mark.parametrize(
@@ -268,7 +285,7 @@ async def test_generate_retry_delays_recorded_in_metrics(
     assert all(d > 0 for d in metrics.retry_delays)
 
 
-async def test_generate_transient_error_exhausts_retries_raises_runtime_error(
+async def test_generate_transient_error_exhausts_retries_raises_transient_error(
     retry_config_3_attempts: RetryConfig,
 ):
     async with OpenRouterClient(
@@ -277,8 +294,13 @@ async def test_generate_transient_error_exhausts_retries_raises_runtime_error(
         client._client.post = AsyncMock(side_effect=httpx.ReadTimeout("timed out"))
         client._sleep = AsyncMock()
 
-        with pytest.raises(RuntimeError, match="failed after 3 attempts"):
+        with pytest.raises(ProviderTransientError) as exc_info:
             await client.generate(prompt="hello", model="m")
+
+        err = exc_info.value
+        assert err.attempts == 3
+        assert len(err.retry_delays) == 2
+        assert err.__cause__ is not None
 
 
 def test_calculate_delay_exponential_backoff():
