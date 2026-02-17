@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 import httpx
 import pytest
 
+from promptum.providers.exceptions import ProviderError
 from promptum.providers.metrics import Metrics
 from promptum.session.case import Prompt
 from promptum.session.runner import Runner
@@ -79,12 +80,12 @@ async def test_run_empty_test_cases_returns_empty_list(mock_provider: AsyncMock)
 @pytest.mark.parametrize(
     "exception",
     [
-        RuntimeError("API down"),
+        ProviderError("API down"),
         ValueError("bad value"),
         TypeError("wrong type"),
         httpx.HTTPError("connection failed"),
     ],
-    ids=["RuntimeError", "ValueError", "TypeError", "HTTPError"],
+    ids=["ProviderError", "ValueError", "TypeError", "HTTPError"],
 )
 async def test_run_provider_exception_returns_error_result(
     sample_prompt: Prompt,

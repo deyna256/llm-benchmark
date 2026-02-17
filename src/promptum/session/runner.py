@@ -3,6 +3,7 @@ from collections.abc import Callable, Sequence
 
 import httpx
 
+from promptum.providers.exceptions import ProviderError
 from promptum.providers.protocol import LLMProvider
 from promptum.session.case import Prompt
 from promptum.session.result import TestResult
@@ -63,7 +64,7 @@ class Runner:
                 execution_error=None,
             )
 
-        except (RuntimeError, ValueError, TypeError, httpx.HTTPError) as e:
+        except (ProviderError, ValueError, TypeError, httpx.HTTPError) as e:
             return TestResult(
                 test_case=test_case,
                 response=None,

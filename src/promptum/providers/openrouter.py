@@ -4,6 +4,13 @@ from typing import Any
 
 import httpx
 
+from promptum.providers.exceptions import (
+    ProviderHTTPStatusError,
+    ProviderNotInitializedError,
+    ProviderResponseParseError,
+    ProviderRetryExhaustedError,
+    ProviderTransientError,
+)
 from promptum.providers.metrics import Metrics
 from promptum.providers.retry import RetryConfig, RetryStrategy
 
@@ -46,10 +53,12 @@ class OpenRouterClient:
         **kwargs: Any,
     ) -> tuple[str, Metrics]:
         if not self._client:
-            raise RuntimeError("Client not initialized. Use async context manager.")
+            raise ProviderNotInitializedError()
 
         config = retry_config or self.default_retry_config
         retry_delays: list[float] = []
+        last_status_code: int = 0
+        last_response_body: str = ""
 
         messages = []
         if system_prompt:
@@ -87,7 +96,7 @@ class OpenRouterClient:
                         data = response.json()
                         content = data["choices"][0]["message"]["content"]
                     except (KeyError, IndexError, TypeError) as e:
-                        raise RuntimeError(f"Invalid API response structure: {e}") from e
+                        raise ProviderResponseParseError(e) from e
 
                     usage = data.get("usage", {})
                     metrics = Metrics(
@@ -102,7 +111,15 @@ class OpenRouterClient:
                     return content, metrics
 
                 if response.status_code not in config.retryable_status_codes:
-                    response.raise_for_status()
+                    try:
+                        response.raise_for_status()
+                    except httpx.HTTPStatusError as e:
+                        raise ProviderHTTPStatusError(
+                            e.response.status_code, e.response.text
+                        ) from e
+
+                last_status_code = response.status_code
+                last_response_body = response.text
 
                 if attempt < config.max_attempts - 1:
                     delay = self._calculate_delay(attempt, config)
@@ -115,13 +132,13 @@ class OpenRouterClient:
                     retry_delays.append(delay)
                     await self._sleep(delay)
                 else:
-                    raise RuntimeError(
-                        f"Request failed after {config.max_attempts} attempts: {e}"
+                    raise ProviderTransientError(
+                        config.max_attempts, retry_delays
                     ) from e
-            except httpx.HTTPStatusError as e:
-                raise RuntimeError(f"HTTP error {e.response.status_code}: {e.response.text}") from e
 
-        raise RuntimeError(f"Request failed after {config.max_attempts} attempts")
+        raise ProviderRetryExhaustedError(
+            config.max_attempts, last_status_code, last_response_body, retry_delays
+        )
 
     async def _sleep(self, delay: float) -> None:
         await asyncio.sleep(delay)
