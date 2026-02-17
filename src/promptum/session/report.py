@@ -12,19 +12,12 @@ class Report:
     def get_summary(self) -> Summary:
         total = len(self.results)
         passed = sum(1 for r in self.results if r.passed)
-
-        execution_errors = sum(1 for r in self.results if r.execution_error is not None)
-        validation_failures= sum(
-            1 for r in self.results
-            if not r.passed and r.execution_error is None
-        )
-
-
+        execution_errors=self._count_execution_errors()
+        validation_failures=self._count_validation_failures()
+        
         latencies = [r.metrics.latency_ms for r in self.results if r.metrics]
         total_cost = sum(r.metrics.cost_usd or 0 for r in self.results if r.metrics)
         total_tokens = sum(r.metrics.total_tokens or 0 for r in self.results if r.metrics)
-        execution_errors=self._count_execution_errors()
-        validation_failures=self._count_validation_failures()
 
         return Summary(
             total=total,
