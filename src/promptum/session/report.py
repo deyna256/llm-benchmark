@@ -12,7 +12,9 @@ class Report:
     def get_summary(self) -> Summary:
         total = len(self.results)
         passed = sum(1 for r in self.results if r.passed)
-
+        execution_errors=self._count_execution_errors()
+        validation_failures=self._count_validation_failures()
+        
         latencies = [r.metrics.latency_ms for r in self.results if r.metrics]
         total_cost = sum(r.metrics.cost_usd or 0 for r in self.results if r.metrics)
         total_tokens = sum(r.metrics.total_tokens or 0 for r in self.results if r.metrics)
@@ -20,13 +22,15 @@ class Report:
         return Summary(
             total=total,
             passed=passed,
-            failed=total - passed,
+            failed=execution_errors + validation_failures,
             pass_rate=passed / total if total > 0 else 0,
             avg_latency_ms=sum(latencies) / len(latencies) if latencies else 0,
             min_latency_ms=min(latencies) if latencies else 0,
             max_latency_ms=max(latencies) if latencies else 0,
             total_cost_usd=total_cost,
             total_tokens=total_tokens,
+            execution_errors=execution_errors,
+            validation_failures=validation_failures,
         )
 
     def filter(
@@ -59,3 +63,14 @@ class Report:
             groups[group_key].append(result)
 
         return {k: Report(results=v) for k, v in groups.items()}
+    
+    def _count_execution_errors(self) -> int:
+        return sum(1 for r in self.results if r.execution_error is not None)
+    
+    def _count_validation_failures(self) -> int:
+        return sum(
+            1
+            for r in self.results
+            if not r.passed and r.execution_error is None
+        )
+    

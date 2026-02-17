@@ -12,3 +12,5 @@ class Summary:
     max_latency_ms: float
     total_cost_usd: float
     total_tokens: int
+    execution_errors: int
+    validation_failures: int

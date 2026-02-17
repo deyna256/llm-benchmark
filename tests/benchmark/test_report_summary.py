@@ -12,6 +12,8 @@ def test_report_summary(sample_report: Report) -> None:
     assert summary.avg_latency_ms == 123.33333333333333
     assert summary.min_latency_ms == 100.0
     assert summary.max_latency_ms == 150.0
+    assert summary.execution_errors == 0
+    assert summary.validation_failures == 1
 
 
 def test_report_summary_empty() -> None:
@@ -26,3 +28,5 @@ def test_report_summary_empty() -> None:
     assert summary.avg_latency_ms == 0
     assert summary.min_latency_ms == 0
     assert summary.max_latency_ms == 0
+    assert summary.execution_errors == 0
+    assert summary.validation_failures == 0
