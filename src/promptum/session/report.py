@@ -7,7 +7,7 @@ from promptum.session.summary import Summary
 
 @dataclass(frozen=True, slots=True)
 class Report:
-    results: tuple[TestResult, ...]
+    results: Sequence[TestResult]
 
     def __post_init__(self):
         object.__setattr__(self, "results", tuple(self.results))
