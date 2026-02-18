@@ -7,7 +7,10 @@ from promptum.session.summary import Summary
 
 @dataclass(frozen=True, slots=True)
 class Report:
-    results: Sequence[TestResult]
+    results: tuple[TestResult, ...]
+
+    def __post_init__(self):
+        object.__setattr__(self, "results", tuple(self.results))
 
     def get_summary(self) -> Summary:
         total = len(self.results)
