@@ -9,6 +9,9 @@ from promptum.session.summary import Summary
 class Report:
     results: Sequence[TestResult]
 
+    def __post_init__(self):
+        object.__setattr__(self, "results", tuple(self.results))
+
     def get_summary(self) -> Summary:
         total = len(self.results)
         passed = sum(1 for r in self.results if r.passed)
