@@ -28,7 +28,7 @@ def test_exact_match_case_insensitive() -> None:
     assert passed is True
 
 
-def test_exact_match_describe() -> None:
+def test_exact_match_describe_includes_validator_name_and_expected_value() -> None:
     validator = ExactMatch("test")
     description = validator.describe()
     assert "Exact match" in description
