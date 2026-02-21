@@ -1,3 +1,5 @@
+import re
+
 from promptum.validation import Regex
 
 
@@ -29,3 +31,11 @@ def test_regex_describe() -> None:
     description = validator.describe()
     assert "Regex" in description
     assert r"\d+" in description
+
+def test_regex_with_ignorecase_flag() -> None:
+    validator = Regex(r"hello", flags=re.IGNORECASE)
+
+    passed, details = validator.validate("HELLO")
+
+    assert passed is True
+    assert details["matched"] == "HELLO"
