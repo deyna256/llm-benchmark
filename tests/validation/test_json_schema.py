@@ -35,7 +35,7 @@ def test_json_schema_extra_keys() -> None:
     assert details["parsed"]["id"] == 1
 
 
-def test_json_schema_describe() -> None:
+def test_json_schema_describe_includes_validator_info_and_required_keys() -> None:
     validator = JsonSchema(required_keys=("a", "b"))
     description = validator.describe()
     assert "Valid JSON" in description

@@ -24,7 +24,7 @@ def test_regex_email() -> None:
     assert passed is False
 
 
-def test_regex_describe() -> None:
+def test_regex_describe_includes_validator_name_and_pattern() -> None:
     validator = Regex(r"\d+")
     description = validator.describe()
     assert "Regex" in description

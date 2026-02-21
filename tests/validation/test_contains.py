@@ -28,7 +28,7 @@ def test_contains_not_found() -> None:
     assert passed is False
 
 
-def test_contains_describe() -> None:
+def test_contains_describe_includes_validator_name_and_substring() -> None:
     validator = Contains("example")
     description = validator.describe()
     assert "Contains" in description
